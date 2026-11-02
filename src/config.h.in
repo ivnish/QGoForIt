@@ -1,0 +1,4 @@
+#pragma once
+
+#define APP_INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
+#define APP_VERSION "@PROJECT_VERSION@"

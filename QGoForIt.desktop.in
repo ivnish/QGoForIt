@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=QGoForIt
+Exec=QGoForIt
+Icon=@CMAKE_INSTALL_FULL_DATADIR@/QGoForIt/icons/QGoForIt.png
+Terminal=false
+Categories=Utility;

@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/">
+    <file>icons/check.svg</file>
+    <file>icons/QGoForIt.svg</file>
+  </qresource>
+</RCC>
