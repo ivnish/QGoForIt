@@ -126,7 +126,7 @@ QGoForIt_0.1_amd64_qt6_24.04_26.04.deb
 ### Install
 
 ```bash
-sudo apt install QGoForIt_0.1_amd64_qt6_24.04_26.04.deb
+sudo apt install ./QGoForIt_0.1_amd64_qt6_24.04_26.04.deb
 ```
 
 If there are missing dependencies:
