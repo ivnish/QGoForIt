@@ -27,9 +27,7 @@ class UnitSpinBox : public QSpinBox {
     return QString::number(value).rightJustified(2, QLatin1Char('0'));
   }
 
-  // The base class selects the whole text after stepping (keyboard
-  // arrows, wheel, PageUp/PageDown); drop that selection so the digits
-  // keep a clean look.
+  // Drop the whole-text selection the base class makes after stepping.
   void stepBy(int steps) override {
     QSpinBox::stepBy(steps);
     lineEdit()->deselect();
@@ -147,8 +145,7 @@ void TimerWidget::retheme(const Theme::Palette &t) {
 }
 
 void TimerWidget::setupUi() {
-  // Match the task list background via roles, so the page follows the
-  // active palette without hardcoding.
+  // Match the task list background via roles.
   setBackgroundRole(QPalette::Base);
   setAutoFillBackground(true);
 
@@ -308,8 +305,7 @@ void TimerWidget::setActiveTask(const QString &taskName) {
 
 void TimerWidget::reloadSettings() {
   timer->reloadSettings();
-  // A duration change in settings applies to the idle timer at once,
-  // matching GoForIt's behavior.
+  // A duration change applies to the idle timer at once.
   if (timer->state() == TaskTimer::State::Idle) {
     timer->reset();
   }

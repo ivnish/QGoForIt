@@ -111,8 +111,7 @@ void TaskRowWidget::applyHighlight(const QColor &bgColor,
                                     const QColor &textColor) {
   QPalette pal = palette();
   pal.setColor(QPalette::Window, bgColor);
-  // Children of a QScrollArea end up with the Base background role; a
-  // highlighted row must paint Window.
+  // Scroll-area children default to the Base background role.
   setBackgroundRole(QPalette::Window);
   setAutoFillBackground(true);
   setPalette(pal);
@@ -199,8 +198,7 @@ void TodoListWidget::updateDropGapColor(const Theme::Palette &t) {
   QColor gapColor = t.highlight;
   gapColor.setAlpha(Sizes::DROP_GAP_ALPHA);
   QPalette gapPalette = dropGap->palette();
-  // Scroll-area children default to the Base background role, but the
-  // gap paints its own Window color.
+  // Scroll-area children default to the Base background role.
   dropGap->setBackgroundRole(QPalette::Window);
   gapPalette.setColor(QPalette::Window, gapColor);
   dropGap->setPalette(gapPalette);
@@ -211,7 +209,7 @@ void TodoListWidget::retheme(const Theme::Palette &t) {
   LayoutUtils::forEachRow<TaskRowWidget>(
       layout, [&t](TaskRowWidget *row) { row->retheme(t); });
   if (selectedRow) {
-    // Re-apply the selection so its colors match the new palette.
+    // Selection colors must follow the new palette.
     selectedRow->applyHighlight(
         QApplication::palette().color(QPalette::Highlight),
         QApplication::palette().color(QPalette::HighlightedText));
@@ -485,8 +483,7 @@ TodoWidget::TodoWidget(const QString &todoPath, const QString &donePath,
   inputLayout->addWidget(addButton);
 
   auto *bottomWidget = new QWidget(this);
-  // Match the task list background via roles, so the strip follows
-  // the active palette (white on light themes) without hardcoding.
+  // Match the task list background via roles.
   bottomWidget->setBackgroundRole(QPalette::Base);
   bottomWidget->setAutoFillBackground(true);
 

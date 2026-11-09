@@ -62,8 +62,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   doneButton->setText(tr("Done"));
   doneButton->setCheckable(true);
 
-  // Styles must be applied before the sizeHint measurement below:
-  // the stylesheet padding is part of the button width.
+  // Apply styles before the sizeHint measurement: the stylesheet
+  // padding is part of the button width.
   applyToolbarTheme(Theme::resolve(QApplication::palette()));
 
   const int buttonWidth =
@@ -116,14 +116,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     restoreGeometry(settings->value("window/geometry").toByteArray());
   }
 
-  // The toolbar theme was applied before the sizeHint measurement above;
-  // here only the pages need their styles.
+  // Only the pages here; the toolbar was themed earlier.
   applyPagesTheme(Theme::resolve(QApplication::palette()));
 }
 
 void MainWindow::applyTheme() {
-  // QApplication's palette is always current; widget palettes may lag
-  // while the palette change is still being propagated.
+  // QApplication's palette is current, but widget palettes may lag
+  // behind a palette change.
   const Theme::Palette t = Theme::resolve(QApplication::palette());
 
   applyToolbarTheme(t);
@@ -146,10 +145,9 @@ void MainWindow::applyPagesTheme(const Theme::Palette &t) {
 
 namespace {
 std::optional<QColor> dominantMenuBarColor(QMenuBar *mb) {
-  // The toolbar strip must match the natively styled menu bar: platform
-  // themes may paint menus with colors not exposed through classic
-  // QPalette roles (e.g. Breeze on Plasma 6). The most frequent pixel of
-  // the bar render is its background; item texts are a tiny minority.
+  // Platform themes may paint the menu bar with colors not exposed
+  // through QPalette roles (e.g. Breeze on Plasma 6). The most frequent
+  // pixel of the render is the background; texts are a minority.
   if (!mb || mb->width() <= 0 || mb->height() <= 0) return std::nullopt;
   const QImage img = mb->grab().toImage();
   QHash<QRgb, int> counts;
@@ -173,28 +171,22 @@ std::optional<QColor> dominantMenuBarColor(QMenuBar *mb) {
 }  // namespace
 
 void MainWindow::applyToolbarTheme(const Theme::Palette &t) {
-  // QMenuBar is left to the platform theme so menus behave like in other
-  // system applications (native highlight and menu font).
-  //
-  // Native menu bar background samples are cached per palette. The
-  // constructor's sample is the authoritative one: by then the menubar
-  // is fully laid out and painted natively. Later samples are taken
-  // only after a palette change (scheduled in scheduleThemeRefresh())
-  // and are accepted after two consecutive agreeing values. A sample
-  // equal to the Window role is the signature of an unnoticed transient
-  // render; when the theme really paints the menu bar in the Window
-  // color, the fallback below yields the identical visual result.
+  // The strip color equals the native menu bar background. Samples are
+  // cached per palette: the ctor sample is trustworthy (menubar fully
+  // laid out), post-change samples need two agreeing passes because
+  // Breeze re-paints the bar across several frames. A sample equal to
+  // the Window role means an unnoticed transient render; the fallback
+  // below gives the identical visual result.
   const auto menuBg = dominantMenuBarColor(menuBar());
   const QColor key = QApplication::palette().color(QPalette::Window);
   if (key != stripPaletteKey) {
-    // Palette changed: drop the previous theme's cached colors.
     appliedStrip = QColor();
     lastSample = QColor();
   }
   const QColor stripSample = menuBg ? *menuBg : QColor();
   if (stripSample.isValid() && stripSample == lastSample &&
       stripSample != t.window) {
-    // Two consecutive samples agree: the menubar render is stable.
+    // Two agreeing passes: the menubar render is stable.
     appliedStrip = stripSample;
     stripPaletteKey = key;
   }
@@ -215,12 +207,8 @@ bool MainWindow::event(QEvent *event) {
 }
 
 void MainWindow::scheduleThemeRefresh() {
-  // Widget palettes are still stale during delivery, and native
-  // decorations (Breeze) repaint across several frames after a theme
-  // switch. The theme is re-applied a few times over a short window;
-  // each pass re-samples the menu bar, and a sample is cached only when
-  // two consecutive samples agree — so a catch of a mid-repaint frame
-  // cannot pin a wrong color until the next palette change.
+  // Breeze repaints native decorations across several frames after a
+  // theme switch, so the theme is re-applied a few times.
   for (const int delay : {0, 150, 400}) {
     QTimer::singleShot(delay, this, [this]() { applyTheme(); });
   }

@@ -119,14 +119,14 @@ QWidget *UiUtils::setupListScrollArea(QScrollArea *area) {
   area->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   area->setFrameShape(QFrame::NoFrame);
 
-  // Follow the palette via roles instead of a hardcoded white background.
+  // Follow the palette via roles instead of a fixed color.
   area->viewport()->setBackgroundRole(QPalette::Base);
   area->viewport()->setAutoFillBackground(true);
 
   auto *container = new QWidget;
-  // Match the list background by role. Do NOT set an unscoped stylesheet
-  // here ("background: transparent;"): Qt applies it to all descendants,
-  // which breaks the row highlight painting.
+  // Match the list background by role; an unscoped stylesheet
+  // ("background: transparent;") would cascade to all descendants
+  // and break the row highlight painting.
   container->setBackgroundRole(QPalette::Base);
   container->setAutoFillBackground(true);
 

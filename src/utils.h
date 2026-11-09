@@ -51,15 +51,13 @@ QWidget *setupListScrollArea(QScrollArea *area);
 }
 
 namespace Theme {
-// UI colors resolved from the active palette; replaces the old
-// hardcoded light-scheme hex values in constants.h.
+// UI colors resolved from the active palette.
 struct Palette {
-  QColor base;    // list / editor background
-  QColor window;  // window and toolbar-strip background (matches the
-                  // natively styled menu bar)
-  QColor text;    // primary text
-  QColor dim;     // secondary elements: drag handle, dimmed digits
-  QColor mid;     // borders, separators
+  QColor base;      // list / editor background
+  QColor window;    // window background
+  QColor text;      // primary text
+  QColor dim;       // secondary elements: drag handle, dimmed digits
+  QColor mid;       // borders, separators
   QColor button;    // button / segment background
   QColor active;    // checked / pressed fill
   QColor hover;     // hover fill

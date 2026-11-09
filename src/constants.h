@@ -136,17 +136,12 @@ inline QString buttonDone(const Theme::Palette &t) {
       .arg(t.button.name(), t.mid.name(), t.text.name(), t.active.name());
 }
 
+// Strip background: t.window by default, dominantMenuBarColor() override.
 inline QString toolbar(const Theme::Palette &t, const QColor &strip) {
   return QStringLiteral(
              "#toolbarContainer { background: %1;"
              "  border-bottom: 1px solid %2; }")
       .arg(strip.name(), t.mid.name());
-}
-
-inline QString toolbar(const Theme::Palette &t) {
-  // Matches the strip to the natively styled menu bar; the default is
-  // palette Window, toolbars can pass an override (see MainWindow).
-  return toolbar(t, t.window);
 }
 
 inline QString inputContainer(const Theme::Palette &t) {
