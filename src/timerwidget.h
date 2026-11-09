@@ -2,6 +2,7 @@
 #define TIMERWIDGET_H
 
 #include "tasktimer.h"
+#include "utils.h"
 
 #include <QWidget>
 
@@ -30,11 +31,13 @@ class TimeUnitWidget : public QWidget {
   void setValue(int value);
   void setAdjustable(bool adjustable);
   void setDigitsDim(bool dim);
+  void retheme(const Theme::Palette &t);
 
  signals:
   void valueEdited();
 
  private:
+  Theme::Palette curTheme;
   QSpinBox *spin;
   QToolButton *upButton;
   QToolButton *downButton;
@@ -54,6 +57,7 @@ class TimerWidget : public QWidget {
   // Re-reads timer settings; affects the idle timer immediately and the
   // running countdown from its next reset.
   void reloadSettings();
+  void retheme(const Theme::Palette &t);
 
  private:
   TaskTimer *timer;
@@ -61,6 +65,7 @@ class TimerWidget : public QWidget {
 
   QLabel *statusLabel;
   QLabel *taskLabel;
+  Theme::Palette curTheme;
   TimeUnitWidget *hoursUnit;
   TimeUnitWidget *minutesUnit;
   TimeUnitWidget *secondsUnit;

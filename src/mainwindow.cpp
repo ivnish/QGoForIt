@@ -9,13 +9,17 @@
 #include <QApplication>
 #include <QButtonGroup>
 #include <QCloseEvent>
+#include <QEvent>
+#include <QHash>
 #include <QHBoxLayout>
+#include <QImage>
 #include <QKeySequence>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QSettings>
 #include <QStackedWidget>
+#include <QTimer>
 #include <QToolButton>
 #include <QWidget>
 
@@ -36,12 +40,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   auto *helpMenu = menuBar()->addMenu(tr("&Help"));
   helpMenu->addAction(tr("&About"), this, &MainWindow::showAbout);
 
-  auto *toolbarArea = new QWidget;
+  toolbarArea = new QWidget;
   toolbarArea->setFixedHeight(50);
-  toolbarArea->setAutoFillBackground(true);
-  QPalette tbPalette = toolbarArea->palette();
-  tbPalette.setColor(QPalette::Window, QColor(230, 230, 230));
-  toolbarArea->setPalette(tbPalette);
+  toolbarArea->setObjectName("toolbarContainer");
 
   auto *tbLayout = new QHBoxLayout(toolbarArea);
   tbLayout->setContentsMargins(0, 8, 0, 7);
@@ -52,17 +53,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   todoButton->setText(tr("To-Do"));
   todoButton->setCheckable(true);
   todoButton->setChecked(true);
-  todoButton->setStyleSheet(Styles::BUTTON_TODO);
 
   timerButton = new QToolButton(toolbarArea);
   timerButton->setText(tr("Timer"));
   timerButton->setCheckable(true);
-  timerButton->setStyleSheet(Styles::BUTTON_TIMER);
 
   doneButton = new QToolButton(toolbarArea);
   doneButton->setText(tr("Done"));
   doneButton->setCheckable(true);
-  doneButton->setStyleSheet(Styles::BUTTON_DONE);
+
+  // Styles must be applied before the sizeHint measurement below:
+  // the stylesheet padding is part of the button width.
+  applyToolbarTheme(Theme::resolve(QApplication::palette()));
 
   const int buttonWidth =
       qMax(todoButton->sizeHint().width(),
@@ -75,9 +77,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   tbLayout->addWidget(todoButton);
   tbLayout->addWidget(timerButton);
   tbLayout->addWidget(doneButton);
-
-  toolbarArea->setObjectName("toolbarContainer");
-  toolbarArea->setStyleSheet(Styles::TOOLBAR);
 
   settings = Paths::settings();
 
@@ -115,6 +114,111 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
   if (settings->contains("window/geometry")) {
     restoreGeometry(settings->value("window/geometry").toByteArray());
+  }
+
+  // The toolbar theme was applied before the sizeHint measurement above;
+  // here only the pages need their styles.
+  applyPagesTheme(Theme::resolve(QApplication::palette()));
+}
+
+void MainWindow::applyTheme() {
+  // QApplication's palette is always current; widget palettes may lag
+  // while the palette change is still being propagated.
+  const Theme::Palette t = Theme::resolve(QApplication::palette());
+
+  applyToolbarTheme(t);
+  applyPagesTheme(t);
+}
+
+void MainWindow::applyPagesTheme(const Theme::Palette &t) {
+  for (int i = 0; i < stackedWidget->count(); ++i) {
+    if (auto *page = stackedWidget->widget(i)) {
+      if (auto *todo = qobject_cast<TodoWidget *>(page)) {
+        todo->retheme(t);
+      } else if (auto *timer = qobject_cast<TimerWidget *>(page)) {
+        timer->retheme(t);
+      } else if (auto *done = qobject_cast<DoneWidget *>(page)) {
+        done->retheme(t);
+      }
+    }
+  }
+}
+
+namespace {
+std::optional<QColor> dominantMenuBarColor(QMenuBar *mb) {
+  // The toolbar strip must match the natively styled menu bar: platform
+  // themes may paint menus with colors not exposed through classic
+  // QPalette roles (e.g. Breeze on Plasma 6). The most frequent pixel of
+  // the bar render is its background; item texts are a tiny minority.
+  if (!mb || mb->width() <= 0 || mb->height() <= 0) return std::nullopt;
+  const QImage img = mb->grab().toImage();
+  QHash<QRgb, int> counts;
+  for (int y = 0; y < img.height(); y += 2) {
+    for (int x = 0; x < img.width(); x += 4) {
+      ++counts[img.pixel(x, y)];
+    }
+  }
+  QColor best;
+  int bestCount = 0;
+  QHashIterator<QRgb, int> it(counts);
+  while (it.hasNext()) {
+    it.next();
+    if (it.value() > bestCount) {
+      bestCount = it.value();
+      best = QColor::fromRgba(it.key());
+    }
+  }
+  return best;
+}
+}  // namespace
+
+void MainWindow::applyToolbarTheme(const Theme::Palette &t) {
+  // QMenuBar is left to the platform theme so menus behave like in other
+  // system applications (native highlight and menu font).
+  //
+  // Native menu bar background samples are cached per palette: an early
+  // sample, taken while the window is fully laid out, is the reliable
+  // one. Later triggers may catch the menu bar re-laid out to its
+  // minimum width (right after geometry restore) before its first
+  // styled paint, so its render comes back as the default Window color.
+  // Such a sample must not be cached: otherwise the first lucky trigger
+  // could pin a wrong strip color for the whole session. A sample equal
+  // to the Window role is the signature of that transient render; when
+  // the theme really paints the menu bar in the Window color, caching
+  // adds nothing over the fallback anyway.
+  const auto menuBg = dominantMenuBarColor(menuBar());
+  const QColor key = QApplication::palette().color(QPalette::Window);
+  if (menuBg && *menuBg != t.window &&
+      (!appliedStrip.isValid() || stripPaletteKey != key)) {
+    appliedStrip = *menuBg;
+    stripPaletteKey = key;
+  }
+  const QColor strip = appliedStrip.isValid() ? appliedStrip : t.window;
+
+  toolbarArea->setStyleSheet(Styles::toolbar(t, strip));
+  todoButton->setStyleSheet(Styles::buttonTodo(t));
+  timerButton->setStyleSheet(Styles::buttonTimer(t));
+  doneButton->setStyleSheet(Styles::buttonDone(t));
+}
+
+bool MainWindow::event(QEvent *event) {
+  if (event->type() == QEvent::PaletteChange) {
+    // Widget palettes are still stale during delivery; retheme after the
+    // loop settles so the menu bar renders with the new palette when the
+    // toolbar strip samples its background.
+    QTimer::singleShot(0, this, [this]() { applyTheme(); });
+  }
+  return QMainWindow::event(event);
+}
+
+void MainWindow::showEvent(QShowEvent *event) {
+  QMainWindow::showEvent(event);
+  if (!applyThemeOnShow) {
+    applyThemeOnShow = true;
+    // showEvent runs before the first layout, so the menu bar has no
+    // geometry yet and cannot be sampled; defer until the queued layout
+    // events are processed.
+    QTimer::singleShot(0, this, [this]() { applyTheme(); });
   }
 }
 

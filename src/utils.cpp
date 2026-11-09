@@ -74,21 +74,61 @@ QString Paths::translationsDir() {
   return QString(APP_INSTALL_PREFIX) + "/share/QGoForIt/translations";
 }
 
+namespace Theme {
+bool isDark(const QPalette &pal) {
+  const QColor window = pal.color(QPalette::Window);
+  const QColor text = pal.color(QPalette::WindowText);
+  return text.lightnessF() > window.lightnessF();
+}
+
+namespace {
+QColor blend(const QColor &a, const QColor &b, qreal ratio) {
+  return QColor(qRound(a.red() * (1 - ratio) + b.red() * ratio),
+                qRound(a.green() * (1 - ratio) + b.green() * ratio),
+                qRound(a.blue() * (1 - ratio) + b.blue() * ratio));
+}
+}  // namespace
+
+Palette resolve(const QPalette &pal) {
+  const bool dark = isDark(pal);
+  const QColor window = pal.color(QPalette::Window);
+  const QColor button = pal.color(QPalette::Button);
+  const QColor mid = pal.color(QPalette::Mid);
+  const QColor text = pal.color(QPalette::WindowText);
+
+  Palette t;
+  t.base = pal.color(QPalette::Base);
+  t.window = window;
+  t.text = text;
+  t.mid = mid;
+  t.button = button;
+  t.dim = blend(text, dark ? window : t.base, 0.55);
+  t.active = blend(button, mid, 0.2);
+  t.hover = blend(button, mid, 0.12);
+  t.trough = t.active;
+  t.work = text;
+  t.rest = QColor(Colors::TIMER_BREAK);
+  if (dark) t.rest = t.rest.lighter(115);
+  t.highlight = pal.color(QPalette::Highlight);
+  return t;
+}
+}  // namespace Theme
+
 QWidget *UiUtils::setupListScrollArea(QScrollArea *area) {
   area->setWidgetResizable(true);
   area->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   area->setFrameShape(QFrame::NoFrame);
 
-  auto *container = new QWidget;
-  container->setAutoFillBackground(true);
-  QPalette containerPalette = container->palette();
-  containerPalette.setColor(QPalette::Window, Qt::white);
-  container->setPalette(containerPalette);
-
-  QPalette vpPalette = area->viewport()->palette();
-  vpPalette.setColor(QPalette::Window, Qt::white);
-  area->viewport()->setPalette(vpPalette);
+  // Follow the palette via roles instead of a hardcoded white background.
+  area->viewport()->setBackgroundRole(QPalette::Base);
   area->viewport()->setAutoFillBackground(true);
+
+  auto *container = new QWidget;
+  // Match the list background by role. Do NOT set an unscoped stylesheet
+  // here ("background: transparent;"): Qt applies it to all descendants,
+  // which breaks the row highlight painting.
+  container->setBackgroundRole(QPalette::Base);
+  container->setAutoFillBackground(true);
 
   area->setWidget(container);
   return container;

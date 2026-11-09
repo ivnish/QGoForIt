@@ -25,7 +25,6 @@
 
 TaskRowWidget::TaskRowWidget(const QString &text, bool checked, QWidget *parent)
     : BaseRowWidget(parent), labelText(text) {
-  checkbox->setStyleSheet(Styles::CHECKBOX_TASK);
   checkbox->setChecked(checked);
   connect(checkbox, &QCheckBox::toggled, this, [this](bool c) {
     if (c) {
@@ -42,17 +41,27 @@ TaskRowWidget::TaskRowWidget(const QString &text, bool checked, QWidget *parent)
   dragHandle->setObjectName("dragHandle");
   dragHandle->setFixedWidth(Sizes::DRAG_HANDLE_WIDTH);
   dragHandle->setAlignment(Qt::AlignCenter);
-  dragHandle->setStyleSheet(
-      QString("color: %1; font-size: %2px;")
-          .arg(Colors::DRAG_HANDLE)
-          .arg(Sizes::DRAG_HANDLE_FONT_SIZE));
   dragHandle->setCursor(Qt::OpenHandCursor);
 
   hLayout->addWidget(dragHandle);
+
+  retheme(Theme::resolve(QApplication::palette()));
 }
 
 bool TaskRowWidget::isChecked() const { return checkbox->isChecked(); }
 void TaskRowWidget::setChecked(bool c) { checkbox->setChecked(c); }
+
+void TaskRowWidget::retheme(const Theme::Palette &t) {
+  checkbox->setStyleSheet(Styles::checkboxTask(t));
+  dragHandle->setStyleSheet(
+      QString("color: %1; font-size: %2px;")
+          .arg(t.dim.name())
+          .arg(Sizes::DRAG_HANDLE_FONT_SIZE));
+  if (editor) {
+    editor->setStyleSheet(QString("background: %1; color: %2; padding: 0 2px;")
+                              .arg(t.base.name(), t.text.name()));
+  }
+}
 
 void TaskRowWidget::commitEdit() {
   labelText = editor->text().trimmed();
@@ -83,7 +92,6 @@ void TaskRowWidget::startEditing() {
   QFont f = label->font();
   editor->setFont(f);
   editor->setFrame(false);
-  editor->setStyleSheet("background: white; color: black; padding: 0 2px;");
   label->hide();
   checkbox->hide();
   dragHandle->hide();
@@ -103,6 +111,9 @@ void TaskRowWidget::applyHighlight(const QColor &bgColor,
                                     const QColor &textColor) {
   QPalette pal = palette();
   pal.setColor(QPalette::Window, bgColor);
+  // Children of a QScrollArea end up with the Base background role; a
+  // highlighted row must paint Window.
+  setBackgroundRole(QPalette::Window);
   setAutoFillBackground(true);
   setPalette(pal);
   label->setStyleSheet(
@@ -169,9 +180,7 @@ TodoListWidget::TodoListWidget(QWidget *parent) : QScrollArea(parent) {
   dropGap->setFixedHeight(0);
   dropGap->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
   dropGap->setAutoFillBackground(true);
-  QPalette gapPalette = dropGap->palette();
-  gapPalette.setColor(QPalette::Window, QColor(26, 130, 220, 55));
-  dropGap->setPalette(gapPalette);
+  updateDropGapColor(Theme::resolve(QApplication::palette()));
 
   layout->addWidget(dropGap);
   layout->addStretch(1);
@@ -184,6 +193,29 @@ TodoListWidget::TodoListWidget(QWidget *parent) : QScrollArea(parent) {
                                    Sizes::SCROLL_STEP * scrollDirection);
     updateDropIndicator(viewport()->mapFromGlobal(QCursor::pos()));
   });
+}
+
+void TodoListWidget::updateDropGapColor(const Theme::Palette &t) {
+  QColor gapColor = t.highlight;
+  gapColor.setAlpha(Sizes::DROP_GAP_ALPHA);
+  QPalette gapPalette = dropGap->palette();
+  // Scroll-area children default to the Base background role, but the
+  // gap paints its own Window color.
+  dropGap->setBackgroundRole(QPalette::Window);
+  gapPalette.setColor(QPalette::Window, gapColor);
+  dropGap->setPalette(gapPalette);
+}
+
+void TodoListWidget::retheme(const Theme::Palette &t) {
+  updateDropGapColor(t);
+  LayoutUtils::forEachRow<TaskRowWidget>(
+      layout, [&t](TaskRowWidget *row) { row->retheme(t); });
+  if (selectedRow) {
+    // Re-apply the selection so its colors match the new palette.
+    selectedRow->applyHighlight(
+        QApplication::palette().color(QPalette::Highlight),
+        QApplication::palette().color(QPalette::HighlightedText));
+  }
 }
 
 void TodoListWidget::addTask(const QString &text, bool checked) {
@@ -231,7 +263,8 @@ QList<QPair<QString, bool>> TodoListWidget::tasks() const {
 
 void TodoListWidget::deselectAll() {
   if (!selectedRow) return;
-  selectedRow->removeHighlight(palette().color(QPalette::Base));
+  selectedRow->removeHighlight(
+      QApplication::palette().color(QPalette::Base));
   selectedRow = nullptr;
 }
 
@@ -265,7 +298,7 @@ void TodoListWidget::startDrag(TaskRowWidget *row) {
   pixmap.fill(Qt::transparent);
   row->render(&pixmap, QPoint(0, 0), QRegion(row->rect()));
   QPainter p(&pixmap);
-  p.setPen(QPen(Qt::black, 1));
+  p.setPen(QPen(QApplication::palette().color(QPalette::WindowText), 1));
   p.drawRect(0, 0, sz.width() - 1, sz.height() - 1);
   p.end();
 
@@ -392,14 +425,16 @@ void TodoListWidget::selectRow(TaskRowWidget *row) {
   if (selectedRow == row) return;
 
   if (selectedRow) {
-    selectedRow->removeHighlight(palette().color(QPalette::Base));
+    selectedRow->removeHighlight(
+        QApplication::palette().color(QPalette::Base));
   }
 
   selectedRow = row;
 
   if (selectedRow) {
-    selectedRow->applyHighlight(palette().color(QPalette::Highlight),
-                                 palette().color(QPalette::HighlightedText));
+    selectedRow->applyHighlight(
+        QApplication::palette().color(QPalette::Highlight),
+        QApplication::palette().color(QPalette::HighlightedText));
   }
   emit activeTaskChanged(selectedRow ? selectedRow->text() : QString());
 }
@@ -428,33 +463,32 @@ TodoWidget::TodoWidget(const QString &todoPath, const QString &donePath,
   mainLayout->setSpacing(0);
   mainLayout->addWidget(listWidget);
 
-  auto *inputContainer = new QWidget(this);
-  inputContainer->setObjectName("taskInputContainer");
-  inputContainer->setStyleSheet(Styles::INPUT_CONTAINER);
-  inputContainer->setFixedHeight(32);
+  auto *inputContainerWidget = new QWidget(this);
+  inputContainerWidget->setObjectName("taskInputContainer");
+  inputContainer = inputContainerWidget;
+  inputContainerWidget->setFixedHeight(32);
 
   auto *inputLayout = new QHBoxLayout(inputContainer);
   inputLayout->setContentsMargins(8, 0, 4, 0);
   inputLayout->setSpacing(0);
 
-  taskInput = new QLineEdit(inputContainer);
+  taskInput = new QLineEdit(inputContainerWidget);
   taskInput->setPlaceholderText(tr("Add new task..."));
   taskInput->setFrame(false);
   taskInput->setStyleSheet("QLineEdit { border: none; background: transparent; }");
 
-  addButton = new QToolButton(inputContainer);
+  addButton = new QToolButton(inputContainerWidget);
   addButton->setText("+");
   addButton->setFixedSize(24, 24);
-  addButton->setStyleSheet(Styles::ADD_BUTTON);
 
   inputLayout->addWidget(taskInput, 1);
   inputLayout->addWidget(addButton);
 
   auto *bottomWidget = new QWidget(this);
+  // Match the task list background via roles, so the strip follows
+  // the active palette (white on light themes) without hardcoding.
+  bottomWidget->setBackgroundRole(QPalette::Base);
   bottomWidget->setAutoFillBackground(true);
-  QPalette bwPalette = bottomWidget->palette();
-  bwPalette.setColor(QPalette::Window, Qt::white);
-  bottomWidget->setPalette(bwPalette);
 
   auto *bottomLayout = new QHBoxLayout(bottomWidget);
   bottomLayout->setContentsMargins(8, 4, 8, 4);
@@ -487,6 +521,8 @@ TodoWidget::TodoWidget(const QString &todoPath, const QString &donePath,
   inactiveTimer->start();
 
   loadFromFile();
+
+  retheme(Theme::resolve(QApplication::palette()));
 }
 
 void TodoWidget::loadFromFile() {
@@ -547,11 +583,16 @@ void TodoWidget::setWatcherEnabled(bool enabled) {
   fileMonitor->setActive(enabled);
 }
 
+void TodoWidget::retheme(const Theme::Palette &t) {
+  inputContainer->setStyleSheet(Styles::inputContainer(t));
+  addButton->setStyleSheet(Styles::addButton(t));
+  listWidget->retheme(t);
+}
+
 DoneRowWidget::DoneRowWidget(const QString &originalLine, QWidget *parent)
     : BaseRowWidget(parent), fullLine(originalLine) {
   taskText = DateUtils::stripDate(originalLine);
 
-  checkbox->setStyleSheet(Styles::CHECKBOX_DONE);
   checkbox->setChecked(true);
   connect(checkbox, &QCheckBox::toggled, this, [this](bool checked) {
     if (!checked) emit taskUncompleted(taskText);
@@ -559,6 +600,12 @@ DoneRowWidget::DoneRowWidget(const QString &originalLine, QWidget *parent)
 
   label->setText(taskText);
   label->setStyleSheet("text-decoration: line-through;");
+
+  retheme(Theme::resolve(QApplication::palette()));
+}
+
+void DoneRowWidget::retheme(const Theme::Palette &t) {
+  checkbox->setStyleSheet(Styles::checkboxDone(t));
 }
 
 DoneWidget::DoneWidget(const QString &donePath, const QString &todoPath,
@@ -642,6 +689,11 @@ void DoneWidget::onTaskUncompleted(const QString &text) {
 void DoneWidget::setAutoCleanup(bool enabled, int days) {
   cleanupDays = days;
   if (enabled) cleanupOldTasks();
+}
+
+void DoneWidget::retheme(const Theme::Palette &t) {
+  LayoutUtils::forEachRow<DoneRowWidget>(
+      layout, [&t](DoneRowWidget *row) { row->retheme(t); });
 }
 
 void DoneWidget::cleanupOldTasks() {

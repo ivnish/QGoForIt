@@ -1,7 +1,9 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <QColor>
 #include <QDate>
+#include <QPalette>
 #include <QString>
 #include <QVBoxLayout>
 
@@ -46,6 +48,29 @@ void forEachRow(QVBoxLayout *layout, Func &&func) {
 
 namespace UiUtils {
 QWidget *setupListScrollArea(QScrollArea *area);
+}
+
+namespace Theme {
+// UI colors resolved from the active palette; replaces the old
+// hardcoded light-scheme hex values in constants.h.
+struct Palette {
+  QColor base;    // list / editor background
+  QColor window;  // window and toolbar-strip background (matches the
+                  // natively styled menu bar)
+  QColor text;    // primary text
+  QColor dim;     // secondary elements: drag handle, dimmed digits
+  QColor mid;     // borders, separators
+  QColor button;    // button / segment background
+  QColor active;    // checked / pressed fill
+  QColor hover;     // hover fill
+  QColor trough;    // progress-bar background
+  QColor work;      // timer "work" accent
+  QColor rest;      // timer "break" accent
+  QColor highlight; // selection color
+};
+
+bool isDark(const QPalette &pal);
+Palette resolve(const QPalette &pal);
 }
 
 namespace DateUtils {

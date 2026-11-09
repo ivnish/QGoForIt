@@ -41,7 +41,6 @@ class UnitSpinBox : public QSpinBox {
 TimeUnitWidget::TimeUnitWidget(const QString &unitName, QWidget *parent)
     : QWidget(parent) {
   setObjectName("timerUnitFrame");
-  setStyleSheet(Styles::TIMER_UNIT);
 
   QFont unitFont = QFontDatabase().systemFont(QFontDatabase::FixedFont);
   unitFont.setPointSizeF(
@@ -110,7 +109,13 @@ void TimeUnitWidget::setAdjustable(bool adjustable) {
 }
 
 void TimeUnitWidget::setDigitsDim(bool dim) {
-  spin->setStyleSheet(dim ? QStringLiteral("color: #b0b0b0;") : QString());
+  spin->setStyleSheet(
+      dim ? QStringLiteral("color: %1;").arg(curTheme.dim.name()) : QString());
+}
+
+void TimeUnitWidget::retheme(const Theme::Palette &t) {
+  curTheme = t;
+  setStyleSheet(Styles::timerUnit(t));
 }
 
 TimerWidget::TimerWidget(QSettings *settings, QWidget *parent)
@@ -121,17 +126,31 @@ TimerWidget::TimerWidget(QSettings *settings, QWidget *parent)
   setupUi();
   connectTimer();
 
+  // The theme must be cached before any refresh* call below.
+  curTheme = Theme::resolve(QApplication::palette());
   refreshTaskHeader();
   refreshPhaseHeader();
   refreshStateControls();
   applyRemaining(timer->remainingMs());
+  retheme(curTheme);
+}
+
+void TimerWidget::retheme(const Theme::Palette &t) {
+  curTheme = t;
+  hoursUnit->retheme(t);
+  minutesUnit->retheme(t);
+  secondsUnit->retheme(t);
+  resetButton->setStyleSheet(Styles::timerButton(t));
+  skipButton->setStyleSheet(Styles::timerButton(t));
+  mainButton->setStyleSheet(Styles::timerButton(t));
+  refreshPhaseHeader();
 }
 
 void TimerWidget::setupUi() {
+  // Match the task list background via roles, so the page follows the
+  // active palette without hardcoding.
+  setBackgroundRole(QPalette::Base);
   setAutoFillBackground(true);
-  QPalette pal = palette();
-  pal.setColor(QPalette::Window, Qt::white);
-  setPalette(pal);
 
   auto scaledFont = [](double scale) {
     QFont f = qApp->font();
@@ -178,24 +197,19 @@ void TimerWidget::setupUi() {
   progressBar->setFixedHeight(Sizes::TIMER_PROGRESS_HEIGHT);
   progressBar->setRange(0, 1000);
   progressBar->setValue(0);
-  progressBar->setStyleSheet(
-      Styles::TIMER_PROGRESS.arg(Colors::BUTTON_ACTIVE, Colors::TIMER_WORK));
   progressBar->setAccessibleName(tr("Timer progress"));
 
   resetButton = new QPushButton(tr("Reset"), this);
-  resetButton->setStyleSheet(Styles::TIMER_BUTTON);
   resetButton->setMinimumHeight(Sizes::TIMER_BUTTON_HEIGHT);
   resetButton->setAccessibleName(tr("Reset the timer"));
   connect(resetButton, &QPushButton::clicked, timer, &TaskTimer::reset);
 
   skipButton = new QPushButton(tr("Skip"), this);
-  skipButton->setStyleSheet(Styles::TIMER_BUTTON);
   skipButton->setMinimumHeight(Sizes::TIMER_BUTTON_HEIGHT);
   skipButton->setAccessibleName(tr("Skip to the next phase"));
   connect(skipButton, &QPushButton::clicked, timer, &TaskTimer::skip);
 
   mainButton = new QPushButton(tr("&Start"), this);
-  mainButton->setStyleSheet(Styles::TIMER_BUTTON);
   mainButton->setMinimumHeight(Sizes::TIMER_BUTTON_HEIGHT);
   mainButton->setMinimumWidth(Sizes::TIMER_BUTTON_MIN_WIDTH);
   connect(mainButton, &QPushButton::clicked, timer, &TaskTimer::toggleRunning);
@@ -365,25 +379,25 @@ void TimerWidget::refreshTaskHeader() {
 }
 
 void TimerWidget::refreshPhaseHeader() {
-  QString chunkColor = Colors::TIMER_WORK;
+  const Theme::Palette &t = curTheme;
+  QColor chunkColor = t.work;
 
   if (!timer->hasActiveTask()) {
     statusLabel->setText(tr("Relax") + ".");
     statusLabel->setStyleSheet(
-        QString("color: %1;").arg(Colors::TIMER_WORK));
+        QString("color: %1;").arg(t.work.name()));
   } else if (timer->phase() == TaskTimer::Phase::Break) {
-    chunkColor = Colors::TIMER_BREAK;
+    chunkColor = t.rest;
     statusLabel->setText(tr("Take a Break") + "!");
     statusLabel->setStyleSheet(
-        QString("color: %1;").arg(Colors::TIMER_BREAK));
+        QString("color: %1;").arg(t.rest.name()));
   } else {
     statusLabel->setText(tr("Active Task") + ":");
     statusLabel->setStyleSheet(
-        QString("color: %1;").arg(Colors::TIMER_WORK));
+        QString("color: %1;").arg(t.work.name()));
   }
 
-  progressBar->setStyleSheet(
-      Styles::TIMER_PROGRESS.arg(Colors::BUTTON_ACTIVE, chunkColor));
+  progressBar->setStyleSheet(Styles::timerProgress(t, chunkColor));
 }
 
 void TimerWidget::startBlinking() {

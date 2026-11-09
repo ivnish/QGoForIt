@@ -2,6 +2,7 @@
 #define TODOWIDGET_H
 
 #include "baserowwidget.h"
+#include "utils.h"
 
 #include <QScrollArea>
 #include <QWidget>
@@ -24,6 +25,7 @@ class TaskRowWidget : public BaseRowWidget {
   void startEditing();
   void applyHighlight(const QColor &bgColor, const QColor &textColor);
   void removeHighlight(const QColor &defaultBgColor);
+  void retheme(const Theme::Palette &t);
   QLabel *dragHandleWidget() { return dragHandle; }
 
  signals:
@@ -59,6 +61,7 @@ class TodoListWidget : public QScrollArea {
   QList<QPair<QString, bool>> tasks() const;
   void deselectAll();
   void adjustRowHeights();
+  void retheme(const Theme::Palette &t);
 
  signals:
   void contentChanged();
@@ -88,6 +91,7 @@ class TodoListWidget : public QScrollArea {
   int computeDropRow(const QPoint &viewportPos) const;
   void moveGapToRow(int rowCount);
   int gapRowCount() const;
+  void updateDropGapColor(const Theme::Palette &t);
   void checkAutoScroll(int viewportY);
   void selectRow(TaskRowWidget *row);
   void removeRow(TaskRowWidget *row);
@@ -104,6 +108,7 @@ class TodoWidget : public QWidget {
                       QWidget *parent = nullptr);
   void reload();
   void setWatcherEnabled(bool enabled);
+  void retheme(const Theme::Palette &t);
 
  signals:
   void doneListChanged();
@@ -111,6 +116,7 @@ class TodoWidget : public QWidget {
 
  private:
   TodoListWidget *listWidget;
+  QWidget *inputContainer;
   QLineEdit *taskInput;
   QToolButton *addButton;
   FileMonitor *fileMonitor;
@@ -128,6 +134,7 @@ class DoneRowWidget : public BaseRowWidget {
  public:
   explicit DoneRowWidget(const QString &originalLine, QWidget *parent = nullptr);
   QString originalLine() const { return fullLine; }
+  void retheme(const Theme::Palette &t);
 
  signals:
   void taskUncompleted(const QString &text);
@@ -146,6 +153,7 @@ class DoneWidget : public QWidget {
   void reload();
   void adjustRowHeights();
   void setAutoCleanup(bool enabled, int days);
+  void retheme(const Theme::Palette &t);
 
  signals:
   void todoListChanged();

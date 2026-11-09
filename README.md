@@ -55,7 +55,7 @@ If you want the notes to not appear in the taskbar, you can use KWin Window Rule
 
 ## Requirements
 
-* Qt 5.15+ or Qt 6.4+
+* Qt 6.4+
 * CMake 3.16+
 * C++20 compatible compiler
 

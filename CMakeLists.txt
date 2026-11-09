@@ -9,9 +9,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
-find_package(Qt${QT_VERSION_MAJOR} QUIET OPTIONAL_COMPONENTS DBus)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 QUIET OPTIONAL_COMPONENTS DBus)
 
 set(PROJECT_SOURCES
         src/main.cpp
@@ -38,23 +37,16 @@ set(PROJECT_SOURCES
         src/constants.h
 )
 
-if(QT_VERSION_MAJOR GREATER_EQUAL 6)
-    qt_add_executable(QGoForIt
-        MANUAL_FINALIZATION
-        ${PROJECT_SOURCES}
-        resources.qrc
-    )
-else()
-    add_executable(QGoForIt
-        ${PROJECT_SOURCES}
-        resources.qrc
-    )
-endif()
+qt_add_executable(QGoForIt
+    MANUAL_FINALIZATION
+    ${PROJECT_SOURCES}
+    resources.qrc
+)
 
-target_link_libraries(QGoForIt PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(QGoForIt PRIVATE Qt6::Widgets)
 
-if (Qt${QT_VERSION_MAJOR}DBus_FOUND)
-    target_link_libraries(QGoForIt PRIVATE Qt${QT_VERSION_MAJOR}::DBus)
+if (Qt6DBus_FOUND)
+    target_link_libraries(QGoForIt PRIVATE Qt6::DBus)
     target_compile_definitions(QGoForIt PRIVATE QGOFORIT_HAVE_DBUS)
 endif()
 
@@ -112,7 +104,7 @@ else()
 endif()
 
 set(CPACK_DEBIAN_FILE_NAME
-    "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_${QGOFORIT_PACKAGE_ARCH}_qt${QT_VERSION_MAJOR}_24.04_26.04.deb")
+    "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_${QGOFORIT_PACKAGE_ARCH}_qt6_24.04_26.04.deb")
 set(CPACK_PACKAGE_CONTACT "ivnish.dev@gmail.com")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Lightweight to-do list application")
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
@@ -123,17 +115,15 @@ set(CPACK_GENERATOR "DEB")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Andrei 'ivnish' Ivnitskii")
 
 set(QGOFORIT_DEB_QT_LIBS core gui widgets)
-if (Qt${QT_VERSION_MAJOR}DBus_FOUND)
+if (Qt6DBus_FOUND)
     list(APPEND QGOFORIT_DEB_QT_LIBS dbus)
 endif()
 foreach(_qt_lib IN LISTS QGOFORIT_DEB_QT_LIBS)
     list(APPEND _qt_depends
-         "libqt${QT_VERSION_MAJOR}${_qt_lib}${QT_VERSION_MAJOR}t64 | libqt${QT_VERSION_MAJOR}${_qt_lib}${QT_VERSION_MAJOR}")
+         "libqt6${_qt_lib}6t64 | libqt6${_qt_lib}6")
 endforeach()
 string(JOIN ", " CPACK_DEBIAN_PACKAGE_DEPENDS ${_qt_depends})
 
 include(CPack)
 
-if(QT_VERSION_MAJOR GREATER_EQUAL 6)
-    qt_finalize_executable(QGoForIt)
-endif()
+qt_finalize_executable(QGoForIt)
