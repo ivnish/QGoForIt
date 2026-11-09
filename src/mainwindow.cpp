@@ -176,23 +176,29 @@ void MainWindow::applyToolbarTheme(const Theme::Palette &t) {
   // QMenuBar is left to the platform theme so menus behave like in other
   // system applications (native highlight and menu font).
   //
-  // Native menu bar background samples are cached per palette: an early
-  // sample, taken while the window is fully laid out, is the reliable
-  // one. Later triggers may catch the menu bar re-laid out to its
-  // minimum width (right after geometry restore) before its first
-  // styled paint, so its render comes back as the default Window color.
-  // Such a sample must not be cached: otherwise the first lucky trigger
-  // could pin a wrong strip color for the whole session. A sample equal
-  // to the Window role is the signature of that transient render; when
-  // the theme really paints the menu bar in the Window color, caching
-  // adds nothing over the fallback anyway.
+  // Native menu bar background samples are cached per palette. The
+  // constructor's sample is the authoritative one: by then the menubar
+  // is fully laid out and painted natively. Later samples are taken
+  // only after a palette change (scheduled in scheduleThemeRefresh())
+  // and are accepted after two consecutive agreeing values. A sample
+  // equal to the Window role is the signature of an unnoticed transient
+  // render; when the theme really paints the menu bar in the Window
+  // color, the fallback below yields the identical visual result.
   const auto menuBg = dominantMenuBarColor(menuBar());
   const QColor key = QApplication::palette().color(QPalette::Window);
-  if (menuBg && *menuBg != t.window &&
-      (!appliedStrip.isValid() || stripPaletteKey != key)) {
-    appliedStrip = *menuBg;
+  if (key != stripPaletteKey) {
+    // Palette changed: drop the previous theme's cached colors.
+    appliedStrip = QColor();
+    lastSample = QColor();
+  }
+  const QColor stripSample = menuBg ? *menuBg : QColor();
+  if (stripSample.isValid() && stripSample == lastSample &&
+      stripSample != t.window) {
+    // Two consecutive samples agree: the menubar render is stable.
+    appliedStrip = stripSample;
     stripPaletteKey = key;
   }
+  lastSample = stripSample;
   const QColor strip = appliedStrip.isValid() ? appliedStrip : t.window;
 
   toolbarArea->setStyleSheet(Styles::toolbar(t, strip));
@@ -203,22 +209,20 @@ void MainWindow::applyToolbarTheme(const Theme::Palette &t) {
 
 bool MainWindow::event(QEvent *event) {
   if (event->type() == QEvent::PaletteChange) {
-    // Widget palettes are still stale during delivery; retheme after the
-    // loop settles so the menu bar renders with the new palette when the
-    // toolbar strip samples its background.
-    QTimer::singleShot(0, this, [this]() { applyTheme(); });
+    scheduleThemeRefresh();
   }
   return QMainWindow::event(event);
 }
 
-void MainWindow::showEvent(QShowEvent *event) {
-  QMainWindow::showEvent(event);
-  if (!applyThemeOnShow) {
-    applyThemeOnShow = true;
-    // showEvent runs before the first layout, so the menu bar has no
-    // geometry yet and cannot be sampled; defer until the queued layout
-    // events are processed.
-    QTimer::singleShot(0, this, [this]() { applyTheme(); });
+void MainWindow::scheduleThemeRefresh() {
+  // Widget palettes are still stale during delivery, and native
+  // decorations (Breeze) repaint across several frames after a theme
+  // switch. The theme is re-applied a few times over a short window;
+  // each pass re-samples the menu bar, and a sample is cached only when
+  // two consecutive samples agree — so a catch of a mid-repaint frame
+  // cannot pin a wrong color until the next palette change.
+  for (const int delay : {0, 150, 400}) {
+    QTimer::singleShot(delay, this, [this]() { applyTheme(); });
   }
 }
 

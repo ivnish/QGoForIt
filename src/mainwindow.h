@@ -9,7 +9,6 @@
 class QCloseEvent;
 class QEvent;
 class QSettings;
-class QShowEvent;
 class QStackedWidget;
 class QButtonGroup;
 class QToolButton;
@@ -25,17 +24,17 @@ class MainWindow : public QMainWindow {
   void showAbout();
   void openSettings();
   void closeEvent(QCloseEvent *event) override;
-  void showEvent(QShowEvent *event) override;
   bool event(QEvent *event) override;
+  void scheduleThemeRefresh();
   void applyTheme();
   void applyPagesTheme(const Theme::Palette &t);
   void applyToolbarTheme(const Theme::Palette &t);
 
   QSettings *settings;
   SettingsDialog *settingsDialog;
-  bool applyThemeOnShow = false;
   QColor appliedStrip;
   QColor stripPaletteKey;
+  QColor lastSample;
   QToolButton *todoButton;
   QToolButton *timerButton;
   QToolButton *doneButton;
@@ -43,4 +42,4 @@ class MainWindow : public QMainWindow {
   QStackedWidget *stackedWidget;
   QButtonGroup *buttonGroup;
 };
-#endif // MAINWINDOW_H
+#endif  // MAINWINDOW_H
