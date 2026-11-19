@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(QGoForIt VERSION 0.1.2 LANGUAGES CXX)
+project(QGoForIt VERSION 0.1.3 LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
