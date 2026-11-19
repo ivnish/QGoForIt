@@ -22,6 +22,7 @@ class TaskRowWidget : public BaseRowWidget {
   QString text() const { return labelText; }
   bool isChecked() const;
   void setChecked(bool c);
+  void setCheckedSilently(bool c);
   void startEditing();
   void applyHighlight(const QColor &bgColor, const QColor &textColor);
   void removeHighlight(const QColor &defaultBgColor);
@@ -32,7 +33,8 @@ class TaskRowWidget : public BaseRowWidget {
   void dragStarted(TaskRowWidget *row);
   void clicked(TaskRowWidget *row);
   void checkedChanged();
-  void taskCompleted(const QString &text);
+  void taskCompleted(TaskRowWidget *row);
+  void textChanged(const QString &text);
 
  protected:
   void mousePressEvent(QMouseEvent *e) override;
@@ -56,8 +58,13 @@ class TodoListWidget : public QScrollArea {
 
  public:
   explicit TodoListWidget(QWidget *parent = nullptr);
-  void addTask(const QString &text, bool checked = false);
+  TaskRowWidget *addTask(const QString &text, bool checked = false);
+  void removeRow(TaskRowWidget *row);
   void clearTasks();
+  // Temporarily detach a row (kept alive) so serialization skips it;
+  // returns its layout index for attachRow().
+  int detachRow(TaskRowWidget *row);
+  void attachRow(TaskRowWidget *row, int index);
   QList<QPair<QString, bool>> tasks() const;
   void deselectAll();
   void adjustRowHeights();
@@ -65,7 +72,8 @@ class TodoListWidget : public QScrollArea {
 
  signals:
   void contentChanged();
-  void taskCompleted(const QString &text);
+  void taskCompleted(TaskRowWidget *row);
+  void taskDeleteRequested(TaskRowWidget *row);
   void activeTaskChanged(const QString &text);
 
  protected:
@@ -94,7 +102,7 @@ class TodoListWidget : public QScrollArea {
   void updateDropGapColor(const Theme::Palette &t);
   void checkAutoScroll(int viewportY);
   void selectRow(TaskRowWidget *row);
-  void removeRow(TaskRowWidget *row);
+  void cancelDrag();
 };
 
 class QToolButton;
@@ -123,9 +131,11 @@ class TodoWidget : public QWidget {
   QString todoFilePath;
   QString doneFilePath;
   void loadFromFile();
-  void saveToFile();
+  void populateTasks(const QString &content);
+  bool saveToFile();
   void addNewTask();
-  void onTaskCompleted(const QString &text);
+  void onTaskCompleted(TaskRowWidget *row);
+  void onTaskDeleteRequested(TaskRowWidget *row);
 };
 
 class DoneRowWidget : public BaseRowWidget {
@@ -134,6 +144,9 @@ class DoneRowWidget : public BaseRowWidget {
  public:
   explicit DoneRowWidget(const QString &originalLine, QWidget *parent = nullptr);
   QString originalLine() const { return fullLine; }
+  bool isChecked() const;
+  void setChecked(bool c);
+  void setCheckedSilently(bool c);
   void retheme(const Theme::Palette &t);
 
  signals:
@@ -166,7 +179,8 @@ class DoneWidget : public QWidget {
   QString todoFilePath;
   int cleanupDays = 0;
   void loadFromFile();
-  void saveToFile();
+  void populateTasks(const QString &content);
+  bool saveToFile();
   void clearTasks();
   void onTaskUncompleted(const QString &text);
   void cleanupOldTasks();

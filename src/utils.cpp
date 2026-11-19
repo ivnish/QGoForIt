@@ -8,7 +8,9 @@
 #include <QDebug>
 #include <QFile>
 #include <QFileInfo>
+#include <QMessageBox>
 #include <QRegularExpression>
+#include <QSaveFile>
 #include <QScrollArea>
 #include <QSettings>
 #include <QStandardPaths>
@@ -134,32 +136,68 @@ QWidget *UiUtils::setupListScrollArea(QScrollArea *area) {
   return container;
 }
 
+void UiUtils::warnWriteFailed(QWidget *parent, const QString &path) {
+  QMessageBox::warning(parent, QCoreApplication::applicationName(),
+                       QObject::tr("Failed to write %1. The change was not "
+                                   "saved; check the file permissions.")
+                           .arg(path));
+}
+
 std::optional<QString> FileUtils::readFile(const QString &path) {
   QFile file(path);
   if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
     qWarning() << "Failed to open" << path << ":" << file.errorString();
     return std::nullopt;
   }
-  return file.readAll();
+  // The read can fail after a successful open() (I/O error); readAll()
+  // then returns empty data with an error set.
+  const QByteArray data = file.readAll();
+  if (file.error() != QFileDevice::NoError) {
+    qWarning() << "Failed to read" << path << ":" << file.errorString();
+    return std::nullopt;
+  }
+  return data;
 }
 
 bool FileUtils::writeFile(const QString &path, const QString &content) {
-  QFile file(path);
-  if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+  QSaveFile file(path);
+  if (!file.open(QIODevice::WriteOnly)) {
     qWarning() << "Failed to save" << path << ":" << file.errorString();
     return false;
   }
-  file.write(content.toUtf8());
+  const QByteArray data = content.toUtf8();
+  if (file.write(data) != data.size()) {
+    qWarning() << "Failed to write" << path << ":" << file.errorString();
+    file.cancelWriting();
+    return false;
+  }
+  if (!file.commit()) {
+    qWarning() << "Failed to commit" << path << ":" << file.errorString();
+    return false;
+  }
   return true;
 }
 
 bool FileUtils::appendFile(const QString &path, const QString &content) {
   QFile file(path);
-  if (!file.open(QIODevice::Append | QIODevice::Text)) {
+  if (!file.open(QIODevice::Append)) {
     qWarning() << "Failed to append to" << path << ":" << file.errorString();
     return false;
   }
-  file.write(content.toUtf8());
+  const QByteArray data = content.toUtf8();
+  if (file.write(data) != data.size() || !file.flush()) {
+    qWarning() << "Failed to append to" << path << ":" << file.errorString();
+    return false;
+  }
+  return true;
+}
+
+bool FileUtils::truncateFile(const QString &path, qint64 size) {
+  QFile file(path);
+  if (!file.resize(size)) {
+    qWarning() << "Failed to truncate" << path << ":" << file.errorString();
+    return false;
+  }
   return true;
 }
 
@@ -170,6 +208,10 @@ void LayoutUtils::clearRows(QVBoxLayout *layout) {
     auto *row = qobject_cast<BaseRowWidget *>(item->widget());
     if (!row) continue;
     layout->removeWidget(row);
+    // The row may outlive its layout removal until deleteLater() runs;
+    // dropping its outgoing signals prevents late commitEdit()/save
+    // chains (e.g. an editor closed by an external reload()).
+    row->disconnect();
     row->deleteLater();
   }
 }

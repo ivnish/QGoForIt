@@ -90,6 +90,14 @@ configure_file(
 
 target_include_directories(QGoForIt PRIVATE ${GENERATED_INCLUDE_DIR})
 
+# Tests
+
+option(QGOFORIT_BUILD_TESTS "Build automated tests" ON)
+if(QGOFORIT_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
 # DEB package
 
 set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")

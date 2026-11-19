@@ -2,6 +2,76 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="uk_UA">
 <context>
+    <name>MainWindow</name>
+    <message>
+        <source>Done</source>
+        <translation>Виконано</translation>
+    </message>
+    <message>
+        <source>&amp;Edit</source>
+        <translation>&amp;Редагувати</translation>
+    </message>
+    <message>
+        <source>&amp;File</source>
+        <translation>&amp;Файл</translation>
+    </message>
+    <message>
+        <source>&amp;Help</source>
+        <translation>&amp;Довідка</translation>
+    </message>
+    <message>
+        <source>&amp;Quit</source>
+        <translation>В&amp;ихід</translation>
+    </message>
+    <message>
+        <source>About</source>
+        <translation>Про програму</translation>
+    </message>
+    <message>
+        <source>Timer</source>
+        <translation>Таймер</translation>
+    </message>
+    <message>
+        <source>To-Do</source>
+        <translation>Справи</translation>
+    </message>
+    <message>
+        <source>&amp;About</source>
+        <translation>&amp;Про програму</translation>
+    </message>
+    <message>
+        <source>Built with Qt</source>
+        <translation>Створено за допомогою Qt</translation>
+    </message>
+    <message>
+        <source>A stylish to-do list with built-in productivity timer.</source>
+        <translation>Стильний список справ із вбудованим таймером продуктивності.</translation>
+    </message>
+    <message>
+        <source>&amp;Preferences</source>
+        <translation>&amp;Налаштування</translation>
+    </message>
+</context>
+<context>
+    <name>QObject</name>
+    <message>
+        <source>QGoForIt is already running.</source>
+        <translation>QGoForIt вже запущено.</translation>
+    </message>
+    <message>
+        <source>Failed to create the configuration and data directories.</source>
+        <translation>Не вдалося створити каталоги налаштувань і даних.</translation>
+    </message>
+    <message>
+        <source>Failed to create %1: %2</source>
+        <translation>Не вдалося створити %1: %2</translation>
+    </message>
+    <message>
+        <source>Failed to write %1. The change was not saved; check the file permissions.</source>
+        <translation>Не вдалося записати %1. Зміну не збережено; перевірте права доступу до файлу.</translation>
+    </message>
+</context>
+<context>
     <name>SettingsDialog</name>
     <message>
         <source> min</source>
@@ -61,54 +131,14 @@
     </message>
 </context>
 <context>
-    <name>MainWindow</name>
+    <name>TimeUnitWidget</name>
     <message>
-        <source>Done</source>
-        <translation>Виконано</translation>
+        <source>Decrease %1</source>
+        <translation>Зменшити %1</translation>
     </message>
     <message>
-        <source>&amp;Edit</source>
-        <translation>&amp;Редагувати</translation>
-    </message>
-    <message>
-        <source>&amp;File</source>
-        <translation>&amp;Файл</translation>
-    </message>
-    <message>
-        <source>&amp;Help</source>
-        <translation>&amp;Довідка</translation>
-    </message>
-    <message>
-        <source>&amp;Quit</source>
-        <translation>В&amp;ихід</translation>
-    </message>
-    <message>
-        <source>About</source>
-        <translation>Про програму</translation>
-    </message>
-    <message>
-        <source>Timer</source>
-        <translation>Таймер</translation>
-    </message>
-    <message>
-        <source>To-Do</source>
-        <translation>Справи</translation>
-    </message>
-    <message>
-        <source>&amp;About</source>
-        <translation>&amp;Про програму</translation>
-    </message>
-    <message>
-        <source>Built with Qt</source>
-        <translation>Створено за допомогою Qt</translation>
-    </message>
-    <message>
-        <source>A stylish to-do list with built-in productivity timer.</source>
-        <translation>Стильний список справ із вбудованим таймером продуктивності.</translation>
-    </message>
-    <message>
-        <source>&amp;Preferences</source>
-        <translation>&amp;Налаштування</translation>
+        <source>Increase %1</source>
+        <translation>Збільшити %1</translation>
     </message>
 </context>
 <context>
@@ -207,28 +237,10 @@
     </message>
 </context>
 <context>
-    <name>TimeUnitWidget</name>
-    <message>
-        <source>Decrease %1</source>
-        <translation>Зменшити %1</translation>
-    </message>
-    <message>
-        <source>Increase %1</source>
-        <translation>Збільшити %1</translation>
-    </message>
-</context>
-<context>
     <name>TodoWidget</name>
     <message>
         <source>Add new task...</source>
         <translation>Додати нове завдання...</translation>
-    </message>
-</context>
-<context>
-    <name>QObject</name>
-    <message>
-        <source>QGoForIt is already running.</source>
-        <translation>QGoForIt вже запущено.</translation>
     </message>
 </context>
 </TS>

@@ -9,6 +9,7 @@
 #include <QCursor>
 #include <QDate>
 #include <QDebug>
+#include <QFileInfo>
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
@@ -18,6 +19,7 @@
 #include <QPen>
 #include <QScrollBar>
 #include <QSettings>
+#include <QSignalBlocker>
 #include <QShortcut>
 #include <QTimer>
 #include <QToolButton>
@@ -28,7 +30,7 @@ TaskRowWidget::TaskRowWidget(const QString &text, bool checked, QWidget *parent)
   checkbox->setChecked(checked);
   connect(checkbox, &QCheckBox::toggled, this, [this](bool c) {
     if (c) {
-      emit taskCompleted(labelText);
+      emit taskCompleted(this);
     } else {
       emit checkedChanged();
     }
@@ -51,6 +53,12 @@ TaskRowWidget::TaskRowWidget(const QString &text, bool checked, QWidget *parent)
 bool TaskRowWidget::isChecked() const { return checkbox->isChecked(); }
 void TaskRowWidget::setChecked(bool c) { checkbox->setChecked(c); }
 
+void TaskRowWidget::setCheckedSilently(bool c) {
+  // Reverting after a failed append must not re-run the save chain.
+  const QSignalBlocker blocker(checkbox);
+  checkbox->setChecked(c);
+}
+
 void TaskRowWidget::retheme(const Theme::Palette &t) {
   checkbox->setStyleSheet(Styles::checkboxTask(t));
   dragHandle->setStyleSheet(
@@ -66,6 +74,7 @@ void TaskRowWidget::retheme(const Theme::Palette &t) {
 void TaskRowWidget::commitEdit() {
   labelText = editor->text().trimmed();
   if (labelText.isEmpty()) labelText = label->text();
+  const bool renamed = labelText != label->text();
   label->setText(labelText);
   editor->deleteLater();
   editor = nullptr;
@@ -73,7 +82,11 @@ void TaskRowWidget::commitEdit() {
   dragHandle->show();
   label->show();
   QTimer::singleShot(0, this, [this]() { adjustHeight(); });
-  emit checkedChanged();
+  // A no-op commit (Enter without changes) must not rewrite the file.
+  if (renamed) {
+    emit checkedChanged();
+    emit textChanged(labelText);
+  }
 }
 
 void TaskRowWidget::cancelEdit() {
@@ -216,7 +229,7 @@ void TodoListWidget::retheme(const Theme::Palette &t) {
   }
 }
 
-void TodoListWidget::addTask(const QString &text, bool checked) {
+TaskRowWidget *TodoListWidget::addTask(const QString &text, bool checked) {
   auto *row = new TaskRowWidget(text, checked, container);
   connect(row, &TaskRowWidget::dragStarted, this,
           &TodoListWidget::startDrag);
@@ -224,13 +237,26 @@ void TodoListWidget::addTask(const QString &text, bool checked) {
   connect(row, &TaskRowWidget::checkedChanged, this,
           &TodoListWidget::contentChanged);
   connect(row, &TaskRowWidget::taskCompleted, this,
+          &TodoListWidget::taskCompleted);
+  connect(row, &TaskRowWidget::textChanged, this,
           [this, row](const QString &text) {
-            removeRow(row);
-            emit taskCompleted(text);
-            emit contentChanged();
+            if (selectedRow == row) emit activeTaskChanged(text);
           });
   int gapIdx = layout->indexOf(dropGap);
   layout->insertWidget(gapIdx, row);
+  return row;
+}
+
+int TodoListWidget::detachRow(TaskRowWidget *row) {
+  const int index = layout->indexOf(row);
+  layout->removeWidget(row);
+  row->hide();
+  return index;
+}
+
+void TodoListWidget::attachRow(TaskRowWidget *row, int index) {
+  layout->insertWidget(qBound(0, index, layout->count() - 1), row);
+  row->show();
 }
 
 void TodoListWidget::removeRow(TaskRowWidget *row) {
@@ -243,6 +269,7 @@ void TodoListWidget::removeRow(TaskRowWidget *row) {
 }
 
 void TodoListWidget::clearTasks() {
+  cancelDrag();
   if (selectedRow) {
     selectedRow = nullptr;
     emit activeTaskChanged(QString());
@@ -271,16 +298,45 @@ void TodoListWidget::adjustRowHeights() {
 }
 
 void TodoListWidget::keyPressEvent(QKeyEvent *e) {
-  if (e->key() == Qt::Key_Delete && selectedRow) {
-    layout->removeWidget(selectedRow);
-    selectedRow->deleteLater();
-    selectedRow = nullptr;
-    emit activeTaskChanged(QString());
-    emit contentChanged();
+  // Deletion is routed through TodoWidget so a failed save can roll
+  // the removal back; ignore it while a drag is active. The selection
+  // is kept until removeRow() clears it after a successful save.
+  if (e->key() == Qt::Key_Delete && selectedRow && !draggedRow) {
+    emit taskDeleteRequested(selectedRow);
     e->accept();
     return;
   }
   QScrollArea::keyPressEvent(e);
+}
+
+void TodoListWidget::cancelDrag() {
+  if (!draggedRow) return;
+
+  if (dragTimer) {
+    dragTimer->stop();
+    dragTimer->deleteLater();
+    dragTimer = nullptr;
+  }
+  scrollTimer->stop();
+  scrollDirection = 0;
+  if (dragGhost) {
+    dragGhost->deleteLater();
+    dragGhost = nullptr;
+  }
+  viewport()->unsetCursor();
+
+  if (selectedRow == draggedRow) {
+    selectedRow = nullptr;
+    emit activeTaskChanged(QString());
+  }
+  // The dragged row is not in the layout, so clearRows() cannot delete it.
+  draggedRow->deleteLater();
+  draggedRow = nullptr;
+
+  // Put the drop gap back above the bottom stretch (as finishDrag does).
+  layout->removeWidget(dropGap);
+  dropGap->setFixedHeight(0);
+  layout->insertWidget(layout->count() - 1, dropGap);
 }
 
 void TodoListWidget::startDrag(TaskRowWidget *row) {
@@ -498,6 +554,8 @@ TodoWidget::TodoWidget(const QString &todoPath, const QString &donePath,
   connect(addButton, &QToolButton::clicked, this, &TodoWidget::addNewTask);
   connect(listWidget, &TodoListWidget::contentChanged, this, &TodoWidget::saveToFile);
   connect(listWidget, &TodoListWidget::taskCompleted, this, &TodoWidget::onTaskCompleted);
+  connect(listWidget, &TodoListWidget::taskDeleteRequested, this,
+          &TodoWidget::onTaskDeleteRequested);
   connect(listWidget, &TodoListWidget::activeTaskChanged, this,
           &TodoWidget::activeTaskChanged);
 
@@ -525,9 +583,12 @@ TodoWidget::TodoWidget(const QString &todoPath, const QString &donePath,
 void TodoWidget::loadFromFile() {
   const auto content = FileUtils::readFile(todoFilePath);
   if (!content) return;
+  populateTasks(*content);
+}
 
+void TodoWidget::populateTasks(const QString &content) {
   const QString donePrefix = QLatin1String(Formats::DONE_PREFIX);
-  for (const QString &line : content->split('\n')) {
+  for (const QString &line : content.split('\n')) {
     const QString l = line.trimmed();
     if (l.isEmpty()) continue;
     if (l.startsWith(donePrefix)) {
@@ -536,11 +597,11 @@ void TodoWidget::loadFromFile() {
       listWidget->addTask(l, false);
     }
   }
-  fileMonitor->setLastKnownContent(*content);
+  fileMonitor->setLastKnownContent(content);
   QTimer::singleShot(0, this, [this]() { listWidget->adjustRowHeights(); });
 }
 
-void TodoWidget::saveToFile() {
+bool TodoWidget::saveToFile() {
   QString content;
   const QString donePrefix = QLatin1String(Formats::DONE_PREFIX);
   for (const auto &task : listWidget->tasks()) {
@@ -551,29 +612,67 @@ void TodoWidget::saveToFile() {
     }
   }
 
-  if (FileUtils::writeFile(todoFilePath, content)) {
-    fileMonitor->setLastKnownContent(content);
+  if (!FileUtils::writeFile(todoFilePath, content)) {
+    UiUtils::warnWriteFailed(this, todoFilePath);
+    return false;
   }
+  fileMonitor->setLastKnownContent(content);
+  return true;
 }
 
 void TodoWidget::addNewTask() {
-  QString text = taskInput->text().trimmed();
+  const QString text = taskInput->text().trimmed();
   if (text.isEmpty()) return;
-  listWidget->addTask(text, false);
+  auto *row = listWidget->addTask(text, false);
   taskInput->clear();
-  saveToFile();
-}
-
-void TodoWidget::onTaskCompleted(const QString &text) {
-  if (FileUtils::appendFile(
-          doneFilePath, DateUtils::currentDateStr() + " " + text + "\n")) {
-    emit doneListChanged();
+  if (!saveToFile()) {
+    // Not persisted: roll the list and the input back.
+    listWidget->removeRow(row);
+    taskInput->setText(text);
   }
 }
 
+void TodoWidget::onTaskCompleted(TaskRowWidget *row) {
+  const QString text = row->text();
+  const qint64 oldDoneSize = QFileInfo(doneFilePath).size();
+  if (!FileUtils::appendFile(
+          doneFilePath, DateUtils::currentDateStr() + " " + text + "\n")) {
+    // Append failed: the task must stay in the todo list, so restore
+    // the checkbox without re-triggering the save chain.
+    row->setCheckedSilently(false);
+    UiUtils::warnWriteFailed(this, doneFilePath);
+    return;
+  }
+
+  // Exclude the row from serialization, but keep it alive for rollback.
+  const int index = listWidget->detachRow(row);
+  if (!saveToFile()) {
+    // The rewrite failed while the append succeeded: undo the append so
+    // the task is not stored in both files, and keep the row visible.
+    FileUtils::truncateFile(doneFilePath, oldDoneSize);
+    listWidget->attachRow(row, index);
+    row->setCheckedSilently(false);
+    return;
+  }
+  listWidget->removeRow(row);
+  emit doneListChanged();
+}
+
+void TodoWidget::onTaskDeleteRequested(TaskRowWidget *row) {
+  const int index = listWidget->detachRow(row);
+  if (!saveToFile()) {
+    // Deletion not persisted: keep the row visible at its position.
+    listWidget->attachRow(row, index);
+    return;
+  }
+  listWidget->removeRow(row);
+}
+
 void TodoWidget::reload() {
+  const auto content = FileUtils::readFile(todoFilePath);
+  if (!content) return;
   listWidget->clearTasks();
-  loadFromFile();
+  populateTasks(*content);
 }
 
 void TodoWidget::setWatcherEnabled(bool enabled) {
@@ -603,6 +702,14 @@ DoneRowWidget::DoneRowWidget(const QString &originalLine, QWidget *parent)
 
 void DoneRowWidget::retheme(const Theme::Palette &t) {
   checkbox->setStyleSheet(Styles::checkboxDone(t));
+}
+
+bool DoneRowWidget::isChecked() const { return checkbox->isChecked(); }
+void DoneRowWidget::setChecked(bool c) { checkbox->setChecked(c); }
+
+void DoneRowWidget::setCheckedSilently(bool c) {
+  const QSignalBlocker blocker(checkbox);
+  checkbox->setChecked(c);
 }
 
 DoneWidget::DoneWidget(const QString &donePath, const QString &todoPath,
@@ -636,8 +743,11 @@ DoneWidget::DoneWidget(const QString &donePath, const QString &todoPath,
 void DoneWidget::loadFromFile() {
   const auto content = FileUtils::readFile(doneFilePath);
   if (!content) return;
+  populateTasks(*content);
+}
 
-  for (const QString &raw : content->split('\n')) {
+void DoneWidget::populateTasks(const QString &content) {
+  for (const QString &raw : content.split('\n')) {
     const QString line = raw.trimmed();
     if (line.isEmpty()) continue;
     auto *row = new DoneRowWidget(line, container);
@@ -652,14 +762,18 @@ void DoneWidget::adjustRowHeights() {
   LayoutUtils::adjustRowHeights(layout);
 }
 
-void DoneWidget::saveToFile() {
+bool DoneWidget::saveToFile() {
   QString content;
   LayoutUtils::forEachRow<DoneRowWidget>(
       layout, [&content](DoneRowWidget *row) {
         content += row->originalLine() + "\n";
       });
 
-  FileUtils::writeFile(doneFilePath, content);
+  if (!FileUtils::writeFile(doneFilePath, content)) {
+    UiUtils::warnWriteFailed(this, doneFilePath);
+    return false;
+  }
+  return true;
 }
 
 void DoneWidget::clearTasks() {
@@ -667,19 +781,39 @@ void DoneWidget::clearTasks() {
 }
 
 void DoneWidget::reload() {
+  const auto content = FileUtils::readFile(doneFilePath);
+  if (!content) return;
   clearTasks();
-  loadFromFile();
+  populateTasks(*content);
 }
 
 void DoneWidget::onTaskUncompleted(const QString &text) {
-  FileUtils::appendFile(todoFilePath, text + "\n");
-
   auto *row = qobject_cast<DoneRowWidget *>(sender());
-  if (row) {
-    layout->removeWidget(row);
-    row->deleteLater();
+  if (!row) return;
+
+  const qint64 oldTodoSize = QFileInfo(todoFilePath).size();
+  if (!FileUtils::appendFile(todoFilePath, text + "\n")) {
+    // Append failed: the task must stay in the done list, so restore
+    // the checkbox without re-triggering the save chain.
+    row->setCheckedSilently(true);
+    UiUtils::warnWriteFailed(this, todoFilePath);
+    return;
   }
-  saveToFile();
+
+  // Exclude the row from serialization, but keep it alive for rollback.
+  const int index = layout->indexOf(row);
+  layout->removeWidget(row);
+  row->hide();
+  if (!saveToFile()) {
+    // The rewrite failed while the append succeeded: undo the append so
+    // the task is not stored in both files, and keep the row visible.
+    FileUtils::truncateFile(todoFilePath, oldTodoSize);
+    layout->insertWidget(index, row);
+    row->show();
+    row->setCheckedSilently(true);
+    return;
+  }
+  row->deleteLater();
   emit todoListChanged();
 }
 

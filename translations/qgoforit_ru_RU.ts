@@ -4,37 +4,37 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../src/mainwindow.cpp" line="27"/>
+        <location filename="../src/mainwindow.cpp" line="31"/>
         <source>&amp;File</source>
         <translation>&amp;Файл</translation>
     </message>
     <message>
-        <location filename="../src/mainwindow.cpp" line="28"/>
+        <location filename="../src/mainwindow.cpp" line="32"/>
         <source>&amp;Quit</source>
         <translation>В&amp;ыход</translation>
     </message>
     <message>
-        <location filename="../src/mainwindow.cpp" line="32"/>
+        <location filename="../src/mainwindow.cpp" line="36"/>
         <source>&amp;Edit</source>
         <translation>&amp;Правка</translation>
     </message>
     <message>
-        <location filename="../src/mainwindow.cpp" line="33"/>
+        <location filename="../src/mainwindow.cpp" line="37"/>
         <source>&amp;Preferences</source>
         <translation>&amp;Настройки</translation>
     </message>
     <message>
-        <location filename="../src/mainwindow.cpp" line="36"/>
+        <location filename="../src/mainwindow.cpp" line="40"/>
         <source>&amp;Help</source>
         <translation>&amp;Справка</translation>
     </message>
     <message>
-        <location filename="../src/mainwindow.cpp" line="37"/>
+        <location filename="../src/mainwindow.cpp" line="41"/>
         <source>&amp;About</source>
         <translation>&amp;О программе</translation>
     </message>
     <message>
-        <location filename="../src/mainwindow.cpp" line="52"/>
+        <location filename="../src/mainwindow.cpp" line="53"/>
         <source>To-Do</source>
         <translation>Задачи</translation>
     </message>
@@ -44,22 +44,22 @@
         <translation>Таймер</translation>
     </message>
     <message>
-        <location filename="../src/mainwindow.cpp" line="63"/>
+        <location filename="../src/mainwindow.cpp" line="62"/>
         <source>Done</source>
         <translation>Выполнено</translation>
     </message>
     <message>
-        <location filename="../src/mainwindow.cpp" line="149"/>
+        <location filename="../src/mainwindow.cpp" line="245"/>
         <source>A stylish to-do list with built-in productivity timer.</source>
         <translation>Стильный список задач со встроенным таймером продуктивности.</translation>
     </message>
     <message>
-        <location filename="../src/mainwindow.cpp" line="150"/>
+        <location filename="../src/mainwindow.cpp" line="246"/>
         <source>Built with Qt</source>
         <translation>Создано с использованием Qt</translation>
     </message>
     <message>
-        <location filename="../src/mainwindow.cpp" line="159"/>
+        <location filename="../src/mainwindow.cpp" line="255"/>
         <source>About</source>
         <translation>О программе</translation>
     </message>
@@ -67,9 +67,24 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../src/main.cpp" line="33"/>
+        <location filename="../src/main.cpp" line="30"/>
+        <source>Failed to create the configuration and data directories.</source>
+        <translation>Не удалось создать каталоги настроек и данных.</translation>
+    </message>
+    <message>
+        <location filename="../src/main.cpp" line="51"/>
+        <source>Failed to create %1: %2</source>
+        <translation>Не удалось создать %1: %2</translation>
+    </message>
+    <message>
+        <location filename="../src/main.cpp" line="41"/>
         <source>QGoForIt is already running.</source>
         <translation>QGoForIt уже запущен.</translation>
+    </message>
+    <message>
+        <location filename="../src/utils.cpp" line="141"/>
+        <source>Failed to write %1. The change was not saved; check the file permissions.</source>
+        <translation>Не удалось записать %1. Изменение не сохранено; проверьте права доступа к файлу.</translation>
     </message>
 </context>
 <context>
@@ -153,14 +168,14 @@
 <context>
     <name>TimeUnitWidget</name>
     <message>
-        <location filename="../src/timerwidget.cpp" line="73"/>
-        <location filename="../src/timerwidget.cpp" line="74"/>
+        <location filename="../src/timerwidget.cpp" line="70"/>
+        <location filename="../src/timerwidget.cpp" line="71"/>
         <source>Increase %1</source>
         <translation>Увеличить %1</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="83"/>
-        <location filename="../src/timerwidget.cpp" line="84"/>
+        <location filename="../src/timerwidget.cpp" line="80"/>
+        <location filename="../src/timerwidget.cpp" line="81"/>
         <source>Decrease %1</source>
         <translation>Уменьшить %1</translation>
     </message>
@@ -168,121 +183,121 @@
 <context>
     <name>TimerWidget</name>
     <message>
-        <location filename="../src/timerwidget.cpp" line="152"/>
+        <location filename="../src/timerwidget.cpp" line="169"/>
         <source>hours</source>
         <translation>часы</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="153"/>
+        <location filename="../src/timerwidget.cpp" line="170"/>
         <source>minutes</source>
         <translation>минуты</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="154"/>
+        <location filename="../src/timerwidget.cpp" line="171"/>
         <source>seconds</source>
         <translation>секунды</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="182"/>
+        <location filename="../src/timerwidget.cpp" line="197"/>
         <source>Timer progress</source>
         <translation>Прогресс таймера</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="184"/>
+        <location filename="../src/timerwidget.cpp" line="199"/>
         <source>Reset</source>
         <translation>Сброс</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="187"/>
+        <location filename="../src/timerwidget.cpp" line="201"/>
         <source>Reset the timer</source>
         <translation>Сбросить таймер</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="190"/>
+        <location filename="../src/timerwidget.cpp" line="204"/>
         <source>Skip</source>
         <translation>Пропустить</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="193"/>
+        <location filename="../src/timerwidget.cpp" line="206"/>
         <source>Skip to the next phase</source>
         <translation>Перейти к следующей фазе</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="196"/>
-        <location filename="../src/timerwidget.cpp" line="330"/>
-        <location filename="../src/timerwidget.cpp" line="342"/>
+        <location filename="../src/timerwidget.cpp" line="209"/>
+        <location filename="../src/timerwidget.cpp" line="341"/>
+        <location filename="../src/timerwidget.cpp" line="353"/>
         <source>&amp;Start</source>
         <translation>&amp;Старт</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="266"/>
-        <location filename="../src/timerwidget.cpp" line="375"/>
+        <location filename="../src/timerwidget.cpp" line="278"/>
+        <location filename="../src/timerwidget.cpp" line="387"/>
         <source>Take a Break</source>
         <translation>Сделайте перерыв</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="267"/>
+        <location filename="../src/timerwidget.cpp" line="279"/>
         <source>Relax and stop thinking about your current task for a while</source>
         <translation>Расслабьтесь и отвлекитесь от текущей задачи</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="270"/>
+        <location filename="../src/timerwidget.cpp" line="282"/>
         <source>The Break is Over</source>
         <translation>Перерыв окончен</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="271"/>
+        <location filename="../src/timerwidget.cpp" line="283"/>
         <source>Your current task is</source>
         <translation>Ваша текущая задача</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="277"/>
+        <location filename="../src/timerwidget.cpp" line="289"/>
         <source>Timer Paused</source>
         <translation>Таймер приостановлен</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="278"/>
+        <location filename="../src/timerwidget.cpp" line="290"/>
         <source>The system was suspended, so the countdown was paused</source>
         <translation>Система уходила в сон, поэтому отсчёт был приостановлен</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="331"/>
-        <location filename="../src/timerwidget.cpp" line="343"/>
+        <location filename="../src/timerwidget.cpp" line="342"/>
+        <location filename="../src/timerwidget.cpp" line="354"/>
         <source>Start the timer</source>
         <translation>Запустить таймер</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="334"/>
+        <location filename="../src/timerwidget.cpp" line="345"/>
         <source>&amp;Pause</source>
         <translation>&amp;Пауза</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="335"/>
+        <location filename="../src/timerwidget.cpp" line="346"/>
         <source>Pause the timer</source>
         <translation>Приостановить таймер</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="338"/>
+        <location filename="../src/timerwidget.cpp" line="349"/>
         <source>&amp;Resume</source>
         <translation>&amp;Продолжить</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="339"/>
+        <location filename="../src/timerwidget.cpp" line="350"/>
         <source>Resume the timer</source>
         <translation>Возобновить таймер</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="362"/>
+        <location filename="../src/timerwidget.cpp" line="373"/>
         <source>You have nothing to do.</source>
         <translation>Вам нечего делать.</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="370"/>
+        <location filename="../src/timerwidget.cpp" line="382"/>
         <source>Relax</source>
         <translation>Отдыхайте</translation>
     </message>
     <message>
-        <location filename="../src/timerwidget.cpp" line="379"/>
+        <location filename="../src/timerwidget.cpp" line="391"/>
         <source>Active Task</source>
         <translation>Активная задача</translation>
     </message>
@@ -290,7 +305,7 @@
 <context>
     <name>TodoWidget</name>
     <message>
-        <location filename="../src/todowidget.cpp" line="441"/>
+        <location filename="../src/todowidget.cpp" line="530"/>
         <source>Add new task...</source>
         <translation>Добавить задачу...</translation>
     </message>

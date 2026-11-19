@@ -29,6 +29,8 @@ namespace FileUtils {
 std::optional<QString> readFile(const QString &path);
 bool writeFile(const QString &path, const QString &content);
 bool appendFile(const QString &path, const QString &content);
+// Best-effort rollback for a failed rewrite after a successful append.
+bool truncateFile(const QString &path, qint64 size);
 }
 
 namespace LayoutUtils {
@@ -48,6 +50,7 @@ void forEachRow(QVBoxLayout *layout, Func &&func) {
 
 namespace UiUtils {
 QWidget *setupListScrollArea(QScrollArea *area);
+void warnWriteFailed(QWidget *parent, const QString &path);
 }
 
 namespace Theme {
